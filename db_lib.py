@@ -98,6 +98,31 @@ class DatabaseConnection:
 			print("MySQLdb OP Error:", mysqle)
 			time.sleep(20)
 
+	def get_user_data(self, sim_num):
+		try:
+			db, cur = self.db_connect(
+				self.db_cred['CBEWSL_DB_CREDENTIALS']['db_comms'])
+
+			query = "SELECT users.user_id, account_id, first_name, last_name from commons_db.users" \
+			" INNER JOIN comms_db.user_mobile ON users.user_id = user_mobile.user_id " \
+			"INNER JOIN commons_db.user_accounts ON users.user_id = user_accounts.user_fk_id WHERE user_mobile.sim_num like '%"+sim_num[-10:]+"%'"
+			a = cur.execute(query)
+			out = []
+			if a:
+				out = cur.fetchall()
+				db.close()
+			return out
+
+		except MySQLdb.OperationalError as mysqle:
+			print("MySQLdb OP Error:", mysqle)
+			time.sleep(20)
+
+
+	def get_sync_acknowledgement_recipients(self):
+		query = "SELECT sim_num FROM user_accounts INNER JOIN comms_db.user_mobile ON  user_fk_id = user_id WHERE role <> 1"
+		result = self.execute_commons_db(query)
+		return result
+
 	def write_inbox(self, msglist='', gsm_info=''):
 		if not msglist:
 			raise ValueError("No msglist definition")
@@ -335,7 +360,6 @@ class DatabaseConnection:
 		return container
 
 	def write_outbox(self, message=None, recipients=None, table=None):
-
 		tsw = dt.today().strftime("%Y-%m-%d %H:%M:%S")
 
 		if not message:
@@ -345,27 +369,25 @@ class DatabaseConnection:
 		if not recipients:
 			print("No recipients specified for sending, skipping...")
 			return -1
-
-		recipients = self.get_all_user_mobile(recipients[:10])
-		
-		query = ("insert into smsoutbox_%s (ts_written,sms_msg) VALUES "
-			"('%s','%s')") % (table,tsw,message)
-		outbox_id = self.write_to_db(query=query, last_insert_id=True)
-
-		query = ("INSERT INTO smsoutbox_%s_status (outbox_id,mobile_id,gsm_id)"
-				" VALUES ") % (table[:-1])
-
-
 		for recipient in recipients:
-			tsw = dt.today().strftime("%Y-%m-%d %H:%M:%S")
-			try:
-				query += "(%s, %s, %s)," % (outbox_id, recipient[0], recipient[2])
-			except KeyError:
-				print (">> Error: Possible key error for", r)
-				continue
-		query = query[:-1]
-		print(query)
-		self.write_to_db(query=query, last_insert_id=False)
+			recipient = self.get_all_user_mobile(recipient[:10])
+		
+			query = ("insert into smsoutbox_%s (ts_written,sms_msg) VALUES "
+				"('%s','%s')") % (table,tsw,message)
+			outbox_id = self.write_to_db(query=query, last_insert_id=True)
+
+			query = ("INSERT INTO smsoutbox_%s_status (outbox_id,mobile_id,gsm_id)"
+					" VALUES ") % (table[:-1])
+
+			for rcpt in recipient:
+				tsw = dt.today().strftime("%Y-%m-%d %H:%M:%S")
+				try:
+					query += "(%s, %s, %s)," % (outbox_id, rcpt[0], rcpt[2])
+				except KeyError:
+					print (">> Error: Possible key error for", r)
+					continue
+			query = query[:-1]
+			self.write_to_db(query=query, last_insert_id=False)
 		return 0
 
 	def get_inbox(self, host='local',read_status=0,table='loggers',limit=200,
