@@ -18,27 +18,30 @@ class Parser:
 			"RiskAssessmentHazardData":"hazard_data",
 			"RiskAssessmentRNC":"resources_and_capacities",
 			"FieldSurveyLogs":"field_survey_logs",
-			"SurficialDataCurrentMeasurement": "ground_measurement"
+			"SurficialDataCurrentMeasurement": "ground_measurement",
 		}
 
 		for raw in raw_data:
 			sender_detail = self.db.get_user_data(raw.simnum)
-
 			if (len(sender_detail) != 0):
 				sender = {
 					"full_name": sender_detail[0][2]+" "+ sender_detail[0][3],
 					"user_id": sender_detail[0][0],
 					"account_id": sender_detail[0][1]
 				}
-
 			deconstruct = raw.data.split(":")
 			key = deconstruct[0]
 			actual_raw_data = deconstruct[1].split("||")
 			data = []
 			for objData in actual_raw_data:
 				data.append(objData.split("<*>"))
-			result = self.db.execute_syncing(table_reference[key], data)
-			self.syncing_acknowledgement(key, result, sender)
+
+			if (key == "MoMsReport"):
+				print(">> Initialize MoMs Reporting...")
+				self.disseminateToExperts(data[0][0],data[0][2],data[0][1],data[0][3],sender)
+			else:
+				result = self.db.execute_syncing(table_reference[key], data)
+				self.syncing_acknowledgement(key, result, sender)
 
 	def syncing_acknowledgement(self, key, result, sender):
 		print(">> Sending sync acknowledgement...")
@@ -57,3 +60,13 @@ class Parser:
 			print(">> Acknowledgement sent...")
 		else:
 			print(">> Failed to sync data to server...")
+	
+	def disseminateToExperts(self, feature, feature_name, description, tos, sender):
+		ct_phone = ['9175048863','9499942312']
+		message = "Manifestation of Movement Report (UMI)\n\n" \
+		"Time of observations: %s\n"\
+		"Feature type: %s (%s)\nDescription: %s\n" % (tos, feature, feature_name, description)
+
+		insert_smsoutbox = self.db.write_outbox(
+			message=message, recipients=ct_phone, table='users')
+		print(">> Acknowledgement sent...")

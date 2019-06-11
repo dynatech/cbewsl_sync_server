@@ -375,9 +375,10 @@ class DatabaseConnection:
 			query = ("insert into smsoutbox_%s (ts_written,sms_msg) VALUES "
 				"('%s','%s')") % (table,tsw,message)
 			outbox_id = self.write_to_db(query=query, last_insert_id=True)
-
+			print(query)
 			query = ("INSERT INTO smsoutbox_%s_status (outbox_id,mobile_id,gsm_id)"
 					" VALUES ") % (table[:-1])
+			print(query)
 
 			for rcpt in recipient:
 				tsw = dt.today().strftime("%Y-%m-%d %H:%M:%S")
