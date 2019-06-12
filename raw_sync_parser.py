@@ -19,6 +19,7 @@ class Parser:
 			"RiskAssessmentRNC":"resources_and_capacities",
 			"FieldSurveyLogs":"field_survey_logs",
 			"SurficialDataCurrentMeasurement": "ground_measurement",
+			"SurficialDataMomsSummary": "manifestations_of_movements"
 		}
 
 		for raw in raw_data:

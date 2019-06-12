@@ -145,6 +145,8 @@ class DatabaseConnection:
 			query_users = self.write_raw_data(msg, gsm_id, ts_sms, ts_stored, sms_msg)
 		
 	def execute_syncing(self, table_reference = '', data=[]):
+		print(table_reference)
+		print(data)
 		result = None
 		for entry in data:
 			if '1' in entry[2]:
@@ -196,6 +198,7 @@ class DatabaseConnection:
 			query = "INSERT INTO %s VALUES (%s)" % (table, value_container)
 		else:
 			print("GROUND MEASUREMENT")
+		print(query)
 		return self.execute_commons_db(query)
 
 	def get_column_names(self, table=''):
